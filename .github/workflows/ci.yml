@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: adapter-reddit
+
+      - uses: actions/checkout@v4
+        with:
+          repository: browserkit-dev/browserkit
+          path: browserkit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install & build @browserkit/core
+        working-directory: browserkit
+        run: |
+          npm install -g pnpm
+          pnpm install --frozen-lockfile
+          pnpm --filter @browserkit/core build
+
+      - name: Patch @browserkit/core dep path
+        working-directory: adapter-reddit
+        run: |
+          npm pkg set 'devDependencies.@browserkit/core'='file:../browserkit/packages/core'
+          npm pkg set 'peerDependencies.@browserkit/core'='>=0.1.0'
+
+      - name: Install adapter dependencies
+        working-directory: adapter-reddit
+        run: npm install
+
+      - name: Install Patchright Chromium
+        working-directory: adapter-reddit
+        run: npx patchright install chromium --with-deps
+
+      - name: Build
+        working-directory: adapter-reddit
+        run: npm run build
+
+      # L1 unit + L3 protocol + L4 reliability (Reddit is public — network OK in CI)
+      # L2 integration tests also run (Reddit is public, no auth needed)
+      - name: Test
+        working-directory: adapter-reddit
+        run: npm test
+        timeout-minutes: 10
+
+      - name: Integration tests
+        working-directory: adapter-reddit
+        run: npm run test:integration
+        timeout-minutes: 15
