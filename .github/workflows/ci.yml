@@ -50,14 +50,11 @@ jobs:
         working-directory: adapter-reddit
         run: npm run build
 
-      # L1 unit + L3 protocol + L4 reliability (Reddit is public — network OK in CI)
-      # L2 integration tests also run (Reddit is public, no auth needed)
+      # L1 unit + L3 structural protocol tests (no Reddit network calls needed)
+      # Live dispatch tests (get_subreddit, search, get_thread) are in
+      # *.integration.test.ts — excluded from CI because GitHub Actions IPs
+      # get 403 from Reddit's API. Run locally with: pnpm test:integration
       - name: Test
         working-directory: adapter-reddit
         run: npm test
-        timeout-minutes: 10
-
-      - name: Integration tests
-        working-directory: adapter-reddit
-        run: npm run test:integration
-        timeout-minutes: 15
+        timeout-minutes: 5

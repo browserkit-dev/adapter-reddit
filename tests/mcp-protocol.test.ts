@@ -1,9 +1,10 @@
 /**
- * L3 — MCP Protocol Tests
+ * L3 — MCP Protocol Tests (structural, no Reddit network calls)
  *
- * Starts the Reddit adapter in-process, connects via real MCP HTTP transport,
- * and verifies: server lifecycle, tool registry, tool dispatch, and error paths.
- * Reddit is a public site — real network calls are fine in CI.
+ * Tests that run in CI without network access to Reddit:
+ * server lifecycle, tool registry, health check, schema validation, bearer token.
+ *
+ * Tests that require live Reddit access are in mcp-protocol.integration.test.ts.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import redditAdapter from "../src/index.js";
@@ -39,8 +40,7 @@ describe("tool registry", () => {
 
   it("includes auto-registered browser management tool", async () => {
     const tools = await client.listTools();
-    const names = tools.map((t) => t.name);
-    expect(names).toContain("browser");
+    expect(tools.map((t) => t.name)).toContain("browser");
   });
 
   it("all tools have a description", async () => {
@@ -51,140 +51,42 @@ describe("tool registry", () => {
   });
 });
 
-// ── health_check ──────────────────────────────────────────────────────────────
+// ── health_check (no Reddit navigation needed) ────────────────────────────────
 
 describe("health_check", () => {
   it("reports site=reddit, loggedIn=true, mode=headless", async () => {
     const result = await client.callTool("browser", { action: "health_check" });
     expect(result.isError).toBeFalsy();
-
-    const text = result.content[0]?.text ?? "";
-    const status = JSON.parse(text) as {
+    const status = JSON.parse(result.content[0]?.text ?? "{}") as {
       site: string;
       loggedIn: boolean;
       mode: string;
     };
-
     expect(status.site).toBe("reddit");
     expect(status.loggedIn).toBe(true);
     expect(status.mode).toBe("headless");
   });
 });
 
-// ── page_state ────────────────────────────────────────────────────────────────
+// ── page_state (no Reddit navigation needed) ──────────────────────────────────
 
 describe("page_state", () => {
   it("returns url, title, mode, isPaused", async () => {
     const result = await client.callTool("browser", { action: "page_state" });
     expect(result.isError).toBeFalsy();
-
-    const text = result.content[0]?.text ?? "";
-    const state = JSON.parse(text) as {
-      url: string;
-      title: string;
-      mode: string;
-      isPaused: boolean;
+    const state = JSON.parse(result.content[0]?.text ?? "{}") as {
+      url: string; title: string; mode: string; isPaused: boolean;
     };
-
     expect(typeof state.url).toBe("string");
-    expect(typeof state.title).toBe("string");
     expect(state.mode).toBe("headless");
     expect(state.isPaused).toBe(false);
   });
 });
 
-// ── get_subreddit dispatch ────────────────────────────────────────────────────
+// ── Schema validation errors (no Reddit calls, pure input validation) ──────────
 
-describe("get_subreddit tool dispatch", () => {
-  it("returns a JSON array of posts from r/programming", async () => {
-    const result = await client.callTool("get_subreddit", { subreddit: "programming", count: 3 });
-    expect(result.isError).toBeFalsy();
-
-    const text = result.content[0]?.text ?? "";
-    const posts = JSON.parse(text) as Array<{
-      id: string;
-      title: string;
-      score: number;
-      author: string;
-      subreddit: string;
-      commentsUrl: string;
-    }>;
-
-    expect(Array.isArray(posts)).toBe(true);
-    expect(posts.length).toBeGreaterThan(0);
-    expect(posts.length).toBeLessThanOrEqual(3);
-
-    const first = posts[0]!;
-    expect(typeof first.id).toBe("string");
-    expect(typeof first.title).toBe("string");
-    expect(first.title.length).toBeGreaterThan(0);
-    expect(typeof first.score).toBe("number");
-    expect(first.subreddit.toLowerCase()).toContain("programming");
-    expect(first.commentsUrl).toContain("reddit.com");
-  }, 30_000);
-
-  it("result content type is text", async () => {
-    const result = await client.callTool("get_subreddit", { subreddit: "programming", count: 1 });
-    expect(result.content[0]?.type).toBe("text");
-  }, 30_000);
-});
-
-// ── search dispatch ───────────────────────────────────────────────────────────
-
-describe("search tool dispatch", () => {
-  it("returns results for a broad query", async () => {
-    const result = await client.callTool("search", { query: "TypeScript", count: 3 });
-    expect(result.isError).toBeFalsy();
-
-    const text = result.content[0]?.text ?? "";
-    const posts = JSON.parse(text) as Array<{ title: string }>;
-
-    expect(Array.isArray(posts)).toBe(true);
-  }, 30_000);
-});
-
-// ── get_thread dispatch ───────────────────────────────────────────────────────
-
-describe("get_thread tool dispatch", () => {
-  it("returns a thread object with post and comments for a current hot post", async () => {
-    // Get a live post ID from the hot listing first
-    const listResult = await client.callTool("get_subreddit", {
-      subreddit: "programming",
-      sort: "hot",
-      count: 3,
-    });
-    const posts = JSON.parse(listResult.content[0]?.text ?? "[]") as Array<{ id: string; numComments: number }>;
-
-    // Find a post with comments
-    const postWithComments = posts.find((p) => p.numComments > 0);
-    const threadId = postWithComments?.id ?? posts[0]?.id;
-    expect(typeof threadId).toBe("string");
-
-    const result = await client.callTool("get_thread", { thread_id: threadId!, count: 3 });
-    expect(result.isError).toBeFalsy();
-
-    const text = result.content[0]?.text ?? "";
-    const thread = JSON.parse(text) as {
-      post: { title: string; id: string } | null;
-      comments: Array<{ author: string; body: string }>;
-    };
-
-    expect(typeof thread).toBe("object");
-    expect(Array.isArray(thread.comments)).toBe(true);
-  }, 30_000);
-
-  it("returns isError=true for a non-existent post ID", async () => {
-    const result = await client.callTool("get_thread", { thread_id: "zzzzzz99999" });
-    // May be isError OR empty thread — both are acceptable
-    const text = result.content[0]?.text ?? "";
-    expect(typeof text).toBe("string");
-  }, 30_000);
-});
-
-// ── Error paths ───────────────────────────────────────────────────────────────
-
-describe("error handling", () => {
-  it("schema validation error for missing subreddit", async () => {
+describe("schema validation errors", () => {
+  it("schema error for missing subreddit", async () => {
     const result = await client.callTool("get_subreddit", {}).catch((e: Error) => e);
     if (result instanceof Error) {
       expect(result.message).toMatch(/validation|invalid/i);
@@ -193,7 +95,7 @@ describe("error handling", () => {
     }
   });
 
-  it("schema validation error for empty query in search", async () => {
+  it("schema error for empty query in search", async () => {
     const result = await client.callTool("search", { query: "" }).catch((e: Error) => e);
     if (result instanceof Error) {
       expect(result.message).toMatch(/validation|invalid/i);
@@ -202,7 +104,7 @@ describe("error handling", () => {
     }
   });
 
-  it("schema validation error for count=0", async () => {
+  it("schema error for count=0", async () => {
     const result = await client.callTool("get_subreddit", { subreddit: "programming", count: 0 }).catch((e: Error) => e);
     if (result instanceof Error) {
       expect(result.message).toMatch(/validation|invalid/i);
