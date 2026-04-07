@@ -68,6 +68,7 @@ function buildThreadUrl(id: string, sort: string): string {
 
 export default defineAdapter({
   site: "reddit",
+  minCoreVersion: "0.1.0",
   domain: "reddit.com",
   loginUrl: "https://old.reddit.com/login",
   selectors: { post: SELECTORS.post, nextPage: SELECTORS.nextPage },
