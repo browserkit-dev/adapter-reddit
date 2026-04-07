@@ -7,8 +7,8 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import redditAdapter from "../src/index.js";
-import { createTestAdapterServer, type TestAdapterServer } from "@browserkit/core/testing";
-import { createTestMcpClient, type TestMcpClient } from "@browserkit/core/testing";
+import { createTestAdapterServer, type TestAdapterServer } from "@browserkit-dev/core/testing";
+import { createTestMcpClient, type TestMcpClient } from "@browserkit-dev/core/testing";
 import type { RedditPost, RedditThread, RedditComment } from "../src/scraper.js";
 
 // ── Shared server ─────────────────────────────────────────────────────────────

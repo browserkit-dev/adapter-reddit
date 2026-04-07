@@ -1,5 +1,5 @@
 {
-  "name": "@browserkit/adapter-reddit",
+  "name": "@browserkit-dev/adapter-reddit",
   "version": "0.1.0",
   "description": "Reddit adapter for browserkit — browse subreddits, threads, search, and user profiles via old.reddit.com",
   "type": "module",
@@ -18,10 +18,10 @@
     "lint": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@browserkit/core": ">=0.1.0"
+    "@browserkit-dev/core": ">=0.1.0"
   },
   "devDependencies": {
-    "@browserkit/core": "^0.1.0",
+    "@browserkit-dev/core": "^0.1.0",
     "@types/node": "^22.13.14",
     "patchright": "^1.51.1",
     "tsx": "^4.19.3",

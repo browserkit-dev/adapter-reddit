@@ -1,4 +1,4 @@
-# @browserkit/adapter-reddit
+# @browserkit-dev/adapter-reddit
 
 [Reddit](https://old.reddit.com) adapter for [browserkit](https://github.com/browserkit-dev/browserkit) — browse subreddits, threads, search, and user profiles via your local browser session.
 
@@ -18,16 +18,16 @@ Plus auto-registered management tools from the framework: `browser` (health chec
 ## Setup
 
 ```bash
-pnpm add @browserkit/adapter-reddit
+pnpm add @browserkit-dev/adapter-reddit
 ```
 
 ```js
 // browserkit.config.js
-import { defineConfig } from "@browserkit/core";
+import { defineConfig } from "@browserkit-dev/core";
 
 export default defineConfig({
   adapters: {
-    "@browserkit/adapter-reddit": { port: 3849 },
+    "@browserkit-dev/adapter-reddit": { port: 3849 },
   },
 });
 ```
